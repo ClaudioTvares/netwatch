@@ -27,7 +27,7 @@ and/or WhatsApp.
 
 ## Development
 
-    git clone <your-repo-url>
+    git clone https://github.com/ClaudioTvares/netwatch.git
     cd netwatch
     python -m venv .venv
     .\.venv\Scripts\Activate.ps1
