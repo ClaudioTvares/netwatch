@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Distribution / packaging
+build/
+dist/
+*.spec
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Netwatch runtime data — never commit customer data or secrets
+data/
+*.db
+*.log
+
+# Local env files
+.env
+.env.*
