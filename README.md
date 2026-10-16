@@ -1,9 +1,8 @@
 # Netwatch
 
-A lightweight, offline-first desktop application for monitoring network
-equipment availability. Detects when devices go offline, when specific
-service ports become unavailable, and alerts the operator via email
-and/or WhatsApp.
+*A local, offline-first desktop monitor for network equipment — checks
+devices and service ports, and alerts you by email or WhatsApp when
+something goes down.*
 
 ## Status
 
@@ -27,11 +26,22 @@ and/or WhatsApp.
 
 ## Development
 
-    git clone <your-repo-url>
+    git clone https://github.com/ClaudioTvares/netwatch.git
     cd netwatch
     python -m venv .venv
     .\.venv\Scripts\Activate.ps1
     pip install -r requirements.txt
+
+## Roadmap
+
+- [x] Project scaffolding and Git setup
+- [x] Device data model
+- [x] Local document-database storage (TinyDB)
+- [ ] Offline license system (free / personal / pro tiers)
+- [ ] Desktop GUI (Tkinter)
+- [ ] TCP + ICMP monitoring engine
+- [ ] Email and WhatsApp notification pipeline
+- [ ] Packaging to a single `.exe` (PyInstaller)
 
 ## License
 
