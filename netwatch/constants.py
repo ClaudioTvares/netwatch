@@ -24,6 +24,10 @@ TIER_CODES = {
     "PRO": "pro",
 }
 
+# The prefix that appears at the start of every license key. Once you
+# have sold licenses, DO NOT change this — old keys would stop working.
+KEY_PREFIX = "NWTC"
+
 # --- File locations (relative to the data directory) ------------------
 
 DATA_DIRNAME = "data"
