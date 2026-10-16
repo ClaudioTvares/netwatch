@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
+license = "LicenseRef-Proprietary"
 dependencies = [
     "tinydb>=4.8.0",
 ]
@@ -20,6 +20,9 @@ dev = [
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["netwatch*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
