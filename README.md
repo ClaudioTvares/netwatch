@@ -37,7 +37,8 @@ something goes down.*
 - [x] Project scaffolding and Git setup
 - [x] Device data model
 - [x] Local document-database storage (TinyDB)
-- [ ] Offline license system (free / personal / pro tiers)
+- [x] Offline license system (free / personal / pro tiers)
+- [x] Test suite for licensing (11 tests, pytest)
 - [ ] Desktop GUI (Tkinter)
 - [ ] TCP + ICMP monitoring engine
 - [ ] Email and WhatsApp notification pipeline
