@@ -42,7 +42,7 @@ something goes down.*
 - [x] Offline license system (free / personal / pro tiers)
 - [x] Test suite for licensing (11 tests, pytest)
 - [X] Desktop GUI (Tkinter)
-- [ ] TCP + ICMP monitoring engine
+- [X] TCP + ICMP monitoring engine
 - [ ] Email and WhatsApp notification pipeline
 - [ ] Packaging to a single `.exe` (PyInstaller)
 
