@@ -1,30 +1,20 @@
-"""Email and WhatsApp notification senders.
-
-Two transports are supported:
-
-    * Email via SMTP (any provider: Gmail, Outlook, custom server).
-    * WhatsApp via CallMeBot (free, no business account needed).
-
-Both functions read their credentials from `settings.json` — call
-`settings.load_settings()` once, modify the returned dict, and pass it
-in. `notifier` never touches the disk itself.
-"""
+"""Email notification sender."""
 
 import smtplib
 from email.message import EmailMessage
 
-import requests
 
-
-def send_email(settings: dict, subject: str, body: str) -> bool:
+def send_email(cfg: dict, subject: str, body: str, to_addr: str | None = None) -> bool:
     """Send an email alert. Returns True on success, False on any failure."""
-    cfg = settings["smtp"]
-    if not (cfg["user"] and cfg["password"] and cfg["to"]):
+    recipient = to_addr or cfg.get("to")
+
+    if not (cfg["user"] and cfg["password"] and recipient):
+        print("[notifier] Missing credentials or recipient.")
         return False
 
     msg = EmailMessage()
     msg["From"] = cfg["user"]
-    msg["To"] = cfg["to"]
+    msg["To"] = recipient
     msg["Subject"] = subject
     msg.set_content(body)
 
@@ -39,34 +29,39 @@ def send_email(settings: dict, subject: str, body: str) -> bool:
         return False
 
 
-def send_whatsapp(settings: dict, message: str) -> bool:
-    """Send a WhatsApp message via CallMeBot. Returns True on success."""
-    cfg = settings["whatsapp"]
-    if not (cfg["enabled"] and cfg["phone"] and cfg["apikey"]):
-        return False
-
-    try:
-        r = requests.get(
-            "https://api.callmebot.com/whatsapp.php",
-            params={
-                "phone": cfg["phone"],
-                "text": message,
-                "apikey": cfg["apikey"],
-            },
-            timeout=10,
-        )
-        return r.status_code == 200
-    except Exception as e:
-        print(f"[notifier] WhatsApp failed: {e}")
-        return False
-
-
 def notify(settings: dict, device, event: str, message: str) -> None:
     """Fire off whatever notification channels are enabled for this device."""
-    subject = f"[Netwatch] {device.name} — {event}"
-    full_message = f"{subject}\n\n{message}"
+    if not device.notify_email:
+        return
 
-    if device.notify_email:
-        send_email(settings, subject, message)
-    if device.notify_whatsapp:
-        send_whatsapp(settings, full_message)
+    subject = f"Netwatch Status — {device.name}"
+    
+    email_body = (
+        f"Netwatch Notification\n"
+        f"{'-' * 40}\n"
+        f"Device: {device.name}\n"
+        f"IP Address: {device.ip}\n"
+        f"Port: {device.port or 'N/A'}\n"
+        f"Event: {event}\n\n"
+        f"{message}\n"
+    )
+    
+    # Use per-device email if set, otherwise fall back to company, then personal
+    recipient = getattr(device, "notify_email_to", None)
+    
+    if recipient:
+        # If the device has a specific email, use company config to send it
+        cfg = settings.get("company_email", {})
+        if not cfg.get("user"):
+            cfg = settings.get("personal_email", {})
+        send_email(cfg, subject, email_body, to_addr=recipient)
+    else:
+        # Fall back to the default company email if no specific email is set
+        cfg = settings.get("company_email", {})
+        if cfg.get("user") and cfg.get("to"):
+            send_email(cfg, subject, email_body)
+        else:
+            # Fallback to personal if company is not configured
+            cfg = settings.get("personal_email", {})
+            if cfg.get("user") and cfg.get("to"):
+                send_email(cfg, subject, email_body)

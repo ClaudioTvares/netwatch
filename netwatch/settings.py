@@ -12,18 +12,20 @@ from .storage import DATA_DIR
 SETTINGS_PATH = DATA_DIR / "settings.json"
 
 DEFAULT_SETTINGS = {
-    "smtp": {
-        "host": "smtp.gmail.com",
+    "company_email": {
+        "host": "smtp.office365.com",
         "port": 587,
         "user": "",
         "password": "",
         "to": "",
     },
-    "whatsapp": {
-        "enabled": False,
-        "phone": "",
-        "apikey": "",
-    },
+    "personal_email": {
+        "host": "smtp.gmail.com",
+        "port": 587,
+        "user": "",
+        "password": "",
+        "to": "",
+    }
 }
 
 
