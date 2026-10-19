@@ -1,6 +1,6 @@
 """User settings for Netwatch.
 
-Stores SMTP (email) and WhatsApp credentials in `data/settings.json`.
+Stores SMTP (email) credentials in `data/settings.json`.
 This file is git-ignored — credentials never leave the user's machine.
 """
 

@@ -30,7 +30,6 @@ class Device:
     port: int | None = None
     check_interval: int = 30
     notify_email: bool = True
-    notify_whatsapp: bool = True
     notify_email_to: str | None = None
     enabled: bool = True
     id: str = field(default_factory=_new_id)

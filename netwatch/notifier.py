@@ -50,18 +50,15 @@ def notify(settings: dict, device, event: str, message: str) -> None:
     recipient = getattr(device, "notify_email_to", None)
     
     if recipient:
-        # If the device has a specific email, use company config to send it
         cfg = settings.get("company_email", {})
         if not cfg.get("user"):
             cfg = settings.get("personal_email", {})
         send_email(cfg, subject, email_body, to_addr=recipient)
     else:
-        # Fall back to the default company email if no specific email is set
         cfg = settings.get("company_email", {})
         if cfg.get("user") and cfg.get("to"):
             send_email(cfg, subject, email_body)
         else:
-            # Fallback to personal if company is not configured
             cfg = settings.get("personal_email", {})
             if cfg.get("user") and cfg.get("to"):
                 send_email(cfg, subject, email_body)
