@@ -11,6 +11,7 @@ grows much larger, `DeviceDialog` should move to its own module.
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+from datetime import datetime
 
 from .constants import APP_NAME, APP_VERSION
 from .licensing import can_add_device
@@ -131,7 +132,13 @@ class App(tk.Tk):
             last_check = status.get("last_check", "")
 
             latency_str = f"{latency:.0f} ms" if latency is not None else "—"
-            last_check_str = last_check.replace("T", " ")[:19] if last_check else "—"
+            
+            if last_check:
+                # Convert stored UTC to local time for display
+                dt = datetime.fromisoformat(last_check)
+                last_check_str = dt.astimezone().strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                last_check_str = "—"
 
             self.tree.insert(
                 "", "end",
