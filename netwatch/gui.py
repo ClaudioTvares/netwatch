@@ -16,6 +16,7 @@ from .constants import APP_NAME, APP_VERSION
 from .licensing import can_add_device
 from .models import Device
 from . import storage
+from .engine import MonitorEngine
 
 
 # Colors for the status column, keyed by Device state.
@@ -41,6 +42,11 @@ class App(tk.Tk):
         self._build_toolbar()
         self._build_table()
         self._build_statusbar()
+
+        # Start the background monitor. It calls self._engine_updated()
+        # whenever it saves a new status, keeping the UI in sync.
+        self.engine = MonitorEngine(on_update=self._engine_updated)
+        self.engine.start()
 
         self.refresh_table()   # load whatever is already in the DB
 
@@ -194,6 +200,24 @@ class App(tk.Tk):
             "Local network equipment monitor.\n"
             "No cloud. No telemetry. No subscription.",
         )
+
+    # =================================================================
+    # Engine callbacks
+    # =================================================================
+
+    def _engine_updated(self) -> None:
+        """Called from the background thread when a status changes.
+
+        Tkinter is not thread-safe. `after(0, ...)` schedules the callback
+        to run on the main thread, which is safe.
+        """
+        self.after(0, self.refresh_table)
+
+    def destroy(self) -> None:
+        """Stop the engine thread before closing the window."""
+        if hasattr(self, "engine"):
+            self.engine.stop()
+        super().destroy()
 
 
 # =====================================================================
