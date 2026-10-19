@@ -41,7 +41,7 @@ something goes down.*
 - [x] Local document-database storage (TinyDB)
 - [x] Offline license system (free / personal / pro tiers)
 - [x] Test suite for licensing (11 tests, pytest)
-- [ ] Desktop GUI (Tkinter)
+- [X] Desktop GUI (Tkinter)
 - [ ] TCP + ICMP monitoring engine
 - [ ] Email and WhatsApp notification pipeline
 - [ ] Packaging to a single `.exe` (PyInstaller)
