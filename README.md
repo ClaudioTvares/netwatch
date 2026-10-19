@@ -4,6 +4,8 @@
 devices and service ports, and alerts you by email or WhatsApp when
 something goes down.*
 
+![Netwatch main window](Interface.png)
+
 ## Status
 
 🚧 Work in progress — v0.1.0 (foundation)
