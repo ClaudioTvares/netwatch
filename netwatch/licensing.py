@@ -60,7 +60,7 @@ from .storage import DATA_DIR
 #
 # The current value below is a placeholder — replace it before shipping.
 
-_SECRET = b"b5892410848527270cbe01354f1d5c72d32c8b5d2be20497e2f6510f50c41967"
+_SECRET = b"placeholder-secret-for-public-release"
 
 
 # ---------------------------------------------------------------------
