@@ -48,7 +48,9 @@ Netwatch is my solution to the first problem. **If it helps you too, you can sup
 
 ## Download
 
-*(Coming soon — will link to the compiled `Netwatch.exe` once packaging is done.)*
+The latest release is available on the [Releases page](https://github.com/ClaudioTvares/netwatch/releases).
+
+- **Windows**: [Download Netwatch.exe](https://github.com/ClaudioTvares/netwatch/releases/latest)
 
 ## Development
 
