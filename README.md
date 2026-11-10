@@ -46,6 +46,7 @@ devices and service ports, and alerts you by email when something goes down.*
 - [x] TCP + ICMP monitoring engine (live background updates)
 - [x] Email notification pipeline (Company & Personal SMTP)
 - [x] WinRAR-style nag dialog for free tier
+- [x] Device grouping and toolbar filtering
 - [ ] Packaging to a single `.exe` (PyInstaller)
 
 ## License

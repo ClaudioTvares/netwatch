@@ -1,8 +1,4 @@
-"""User settings for Netwatch.
-
-Stores SMTP (email) credentials in `data/settings.json`.
-This file is git-ignored — credentials never leave the user's machine.
-"""
+"""User settings for Netwatch."""
 
 import json
 from pathlib import Path
@@ -12,6 +8,10 @@ from .storage import DATA_DIR
 SETTINGS_PATH = DATA_DIR / "settings.json"
 
 DEFAULT_SETTINGS = {
+    "general": {
+        "alert_interval_hours": 12,
+        "show_close_warning": True,
+    },
     "company_email": {
         "host": "smtp.office365.com",
         "port": 587,
@@ -39,8 +39,6 @@ def load_settings() -> dict:
     except (json.JSONDecodeError, OSError):
         return _copy(DEFAULT_SETTINGS)
 
-    # Merge saved values over defaults, so newly-added default keys
-    # appear even in old settings files.
     result = _copy(DEFAULT_SETTINGS)
     for section, values in saved.items():
         if isinstance(values, dict) and section in result:

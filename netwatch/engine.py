@@ -39,6 +39,14 @@ class MonitorEngine:
         now = datetime.now(timezone.utc)
 
         current_settings = settings_module.load_settings()
+        
+        # Read the user's desired reminder interval (default to 12h if missing)
+        try:
+            interval_hours = int(current_settings.get("general", {}).get("alert_interval_hours", 12))
+        except (ValueError, TypeError):
+            interval_hours = 12
+            
+        reminder_delta = timedelta(hours=interval_hours)
 
         for device in devices:
             last_status = statuses.get(device.id, {})
@@ -70,7 +78,7 @@ class MonitorEngine:
                 last_notified_str = last_status.get("last_notified")
                 if last_notified_str:
                     last_notified = datetime.fromisoformat(last_notified_str)
-                    if now - last_notified > timedelta(hours=12):
+                    if now - last_notified > reminder_delta:
                         should_notify = True
                 else:
                     should_notify = True

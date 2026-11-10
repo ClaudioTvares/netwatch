@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from datetime import datetime, timezone
+from PIL import Image, ImageTk
 
 from .constants import APP_NAME, APP_VERSION
 from .licensing import can_add_device
@@ -13,6 +14,7 @@ from . import notifier
 from .monitor import full_check
 from .engine import MonitorEngine
 from .nag import NagDialog, should_show_nag
+from .tray import TrayIcon
 
 
 _STATUS_COLORS = {
@@ -30,18 +32,31 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"{APP_NAME} — Network Equipment Monitor")
-        self.geometry("960x520")
+        
+        try:
+            icon_img = Image.open("netwatch.ico")
+            self.icon_photo = ImageTk.PhotoImage(icon_img)
+            self.iconphoto(True, self.icon_photo)
+        except Exception as e:
+            print(f"[gui] Could not load icon: {e}")
+
+        self.geometry("1050x520")
         self.minsize(800, 400)
         
         self.current_group = "All Groups"
+        self.status_var = tk.StringVar(value="Ready")
 
         self._build_menu()
         self._build_toolbar()
         self._build_table()
-        self._build_statusbar()
 
         self.engine = MonitorEngine(on_update=self._engine_updated)
         self.engine.start()
+
+        self.tray = TrayIcon(self)
+        self.tray.run()
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close_clicked)
 
         self.refresh_table()
 
@@ -51,8 +66,9 @@ class App(tk.Tk):
     def _build_menu(self) -> None:
         menubar = tk.Menu(self)
         file_menu = tk.Menu(menubar, tearoff=0)
-        file_menu.add_command(label="Settings…", command=self._open_settings)
+        file_menu.add_command(label="Email Settings…", command=self._open_settings)
         file_menu.add_separator()
+        file_menu.add_command(label="Minimize to Background", command=self.hide_window)
         file_menu.add_command(label="Exit", command=self.destroy)
         menubar.add_cascade(label="File", menu=file_menu)
 
@@ -70,15 +86,19 @@ class App(tk.Tk):
         ttk.Button(bar, text="Delete",     command=self._on_delete).pack(side="left", padx=(6, 0))
         ttk.Button(bar, text="Test Now",   command=self._on_test).pack(side="left", padx=(6, 0))
         
-        ttk.Button(bar, text="Refresh",    command=self.refresh_table).pack(side="right")
-        
-        # Group filter
         self.group_var = tk.StringVar(value="All Groups")
-        self.group_combo = ttk.Combobox(bar, textvariable=self.group_var, state="readonly", width=20)
+        self.group_combo = ttk.Combobox(bar, textvariable=self.group_var, state="readonly", width=15)
         self.group_combo.pack(side="right", padx=(0, 10))
         self.group_combo.bind("<<ComboboxSelected>>", self._on_group_change)
-        
         ttk.Label(bar, text="Group:").pack(side="right", padx=(0, 4))
+
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", lambda *args: self.refresh_table())
+        search_entry = ttk.Entry(bar, textvariable=self.search_var, width=18)
+        search_entry.pack(side="right", padx=(0, 10))
+        ttk.Label(bar, text="Device Search:").pack(side="right", padx=(0, 4))
+
+        ttk.Label(bar, textvariable=self.status_var, foreground="#57606a").pack(side="right", padx=(0, 15))
 
     def _on_group_change(self, event=None) -> None:
         self.current_group = self.group_var.get()
@@ -104,19 +124,25 @@ class App(tk.Tk):
 
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.pack(side="left", fill="both", expand=True, padx=(8, 0), pady=(0, 8))
-        scrollbar.pack(side="right", fill="y", padx=(0, 8), pady=(0, 8))
+        
+        # Footer with developer credit
+        footer = ttk.Frame(self, padding=(8, 4))
+        footer.pack(fill="x", side="bottom")
+        ttk.Label(
+            footer, 
+            text="Developed by Claudio Tavares", 
+            font=("", 8), 
+            foreground="#57606a"
+        ).pack(side="right")
 
-    def _build_statusbar(self) -> None:
-        self.status_var = tk.StringVar(value="Ready")
-        ttk.Label(self, textvariable=self.status_var, anchor="w", padding=(8, 4), relief="sunken").pack(fill="x", side="bottom")
+        scrollbar.pack(side="right", fill="y", padx=(0, 8), pady=(0, 8))
+        self.tree.pack(side="left", fill="both", expand=True, padx=(8, 0), pady=(0, 8))
 
     def refresh_table(self) -> None:
         self.tree.delete(*self.tree.get_children())
         devices = storage.list_devices()
         statuses = storage.list_status()
 
-        # Update dropdown options
         groups = sorted({d.group for d in devices if d.group})
         combo_options = ["All Groups"] + groups
         self.group_combo["values"] = combo_options
@@ -125,11 +151,15 @@ class App(tk.Tk):
             self.current_group = "All Groups"
             self.group_var.set("All Groups")
 
-        # Filter list
-        filtered_devices = [
-            d for d in devices 
-            if self.current_group == "All Groups" or d.group == self.current_group
-        ]
+        search_term = self.search_var.get().lower()
+
+        filtered_devices = []
+        for d in devices:
+            if self.current_group != "All Groups" and d.group != self.current_group:
+                continue
+            if search_term and search_term not in d.name.lower():
+                continue
+            filtered_devices.append(d)
 
         for device in filtered_devices:
             status = statuses.get(device.id, {})
@@ -156,7 +186,7 @@ class App(tk.Tk):
                 tags=(state,),
             )
         
-        self.status_var.set(f"{len(filtered_devices)} device(s) shown — last refreshed just now")
+        self.status_var.set(f"{len(filtered_devices)} device(s) shown")
 
     def _selected_device(self) -> Device | None:
         selection = self.tree.selection()
@@ -183,7 +213,6 @@ class App(tk.Tk):
             return
         storage.delete_device(device.id)
         self.refresh_table()
-        self.status_var.set(f"Deleted '{device.name}'.")
 
     def _on_test(self) -> None:
         device = self._selected_device()
@@ -209,7 +238,7 @@ class App(tk.Tk):
         self.status_var.set(f"Test complete: {device.name} is {state_name}")
 
     def _show_about(self) -> None:
-        messagebox.showinfo(f"About {APP_NAME}", f"{APP_NAME} v{APP_VERSION}\n\nLocal network equipment monitor.\nNo cloud. No telemetry. No subscription.")
+        messagebox.showinfo(f"About {APP_NAME}", f"{APP_NAME} v{APP_VERSION}\n\nLocal network equipment monitor.\nNo cloud. No telemetry. No subscription.\n\nDeveloped by Claudio Tavares")
 
     def _open_settings(self) -> None:
         SettingsDialog(self)
@@ -220,9 +249,34 @@ class App(tk.Tk):
     def _engine_updated(self) -> None:
         self.after(0, self.refresh_table)
 
+    def hide_window(self) -> None:
+        self.withdraw()
+
+    def on_close_clicked(self) -> None:
+        current_settings = settings_module.load_settings()
+        general = current_settings.get("general", {})
+        
+        if not general.get("show_close_warning", True):
+            self.hide_window()
+            return
+
+        dialog = HideWarningDialog(self)
+        self.wait_window(dialog)
+        
+        if dialog.action == "hide":
+            if dialog.var_show_again.get() is False:
+                general["show_close_warning"] = False
+                current_settings["general"] = general
+                settings_module.save_settings(current_settings)
+            self.hide_window()
+        elif dialog.action == "exit":
+            self.destroy()
+
     def destroy(self) -> None:
         if hasattr(self, "engine"):
             self.engine.stop()
+        if hasattr(self, "tray"):
+            self.tray.icon.stop()
         super().destroy()
 
 
@@ -379,6 +433,10 @@ class SettingsDialog(tk.Toplevel):
 
         current = settings_module.load_settings()
         
+        g = current.get("general", {})
+        self.var_interval_hours = tk.StringVar(value=str(g.get("alert_interval_hours", 12)))
+        self.var_show_close_warning = tk.BooleanVar(value=g.get("show_close_warning", True))
+
         c = current.get("company_email", {})
         self.var_co_host = tk.StringVar(value=c.get("host", "smtp.office365.com"))
         self.var_co_port = tk.StringVar(value=str(c.get("port", 587)))
@@ -398,6 +456,32 @@ class SettingsDialog(tk.Toplevel):
     def _build_widgets(self) -> None:
         notebook = ttk.Notebook(self)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # TAB 0: GENERAL
+        frame_gen = ttk.Frame(notebook, padding=16)
+        notebook.add(frame_gen, text="  General  ")
+
+        row = 0
+        ttk.Label(frame_gen, text="Alert Settings", font=("", 10, "bold")).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 12))
+        
+        row += 1
+        ttk.Label(frame_gen, text="Reminder Interval (hours)").grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Entry(frame_gen, textvariable=self.var_interval_hours, width=10).grid(row=row, column=1, sticky="w", pady=4)
+        
+        row += 1
+        ttk.Label(
+            frame_gen, 
+            text="If a device remains offline, send another email after this many hours.", 
+            foreground="#57606a",
+            font=("", 8)
+        ).grid(row=row, column=0, columnspan=2, sticky="w")
+
+        row += 1
+        ttk.Checkbutton(
+            frame_gen,
+            text="Show warning when closing the window",
+            variable=self.var_show_close_warning
+        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(16, 0))
 
         # TAB 1: COMPANY
         frame_co = ttk.Frame(notebook, padding=16)
@@ -499,6 +583,16 @@ class SettingsDialog(tk.Toplevel):
         def get_port(port_str):
             try: return int(port_str)
             except ValueError: return 587
+            
+        try:
+            interval_hours = int(self.var_interval_hours.get().strip())
+        except ValueError:
+            interval_hours = 12
+
+        gen_cfg = {
+            "alert_interval_hours": interval_hours,
+            "show_close_warning": self.var_show_close_warning.get(),
+        }
 
         co_cfg = {
             "host": self.var_co_host.get().strip(),
@@ -516,6 +610,7 @@ class SettingsDialog(tk.Toplevel):
         }
 
         settings_module.save_settings({
+            "general": gen_cfg,
             "company_email": co_cfg,
             "personal_email": pe_cfg
         })
@@ -570,6 +665,57 @@ class SettingsDialog(tk.Toplevel):
             messagebox.showinfo("Success", f"Test email sent successfully to {to_addr}!", parent=self)
         else:
             messagebox.showerror("Failed", "Could not send email.\n\nCheck your VS Code terminal for the exact error message.", parent=self)
+
+
+class HideWarningDialog(tk.Toplevel):
+    """Custom dialog shown when the user closes the main window."""
+    
+    def __init__(self, parent: App):
+        super().__init__(parent)
+        self.title("Netwatch is still running")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+        
+        self.action = None
+        self.var_show_again = tk.BooleanVar(value=True)
+
+        frame = ttk.Frame(self, padding=20)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(
+            frame, 
+            text="Netwatch is still running in the background", 
+            font=("", 12, "bold")
+        ).pack(anchor="w", pady=(0, 10))
+
+        msg = (
+            "The app will keep running in the background so it can "
+            "monitor your devices and send email alerts.\n\n"
+            "You can reopen it anytime by clicking the green icon in your "
+            "notification area (near the clock)."
+        )
+        ttk.Label(frame, text=msg, wraplength=380, justify="left").pack(anchor="w", pady=(0, 16))
+
+        ttk.Checkbutton(
+            frame, 
+            text="Don't show this warning again", 
+            variable=self.var_show_again
+        ).pack(anchor="w", pady=(0, 16))
+
+        btn_frame = ttk.Frame(frame)
+        btn_frame.pack(fill="x")
+        
+        ttk.Button(btn_frame, text="Exit Netwatch", command=self._on_exit).pack(side="left")
+        ttk.Button(btn_frame, text="Minimize to Background", command=self._on_hide).pack(side="right")
+
+    def _on_hide(self):
+        self.action = "hide"
+        self.destroy()
+
+    def _on_exit(self):
+        self.action = "exit"
+        self.destroy()
 
 
 def _is_valid_ipv4(ip: str) -> bool:
