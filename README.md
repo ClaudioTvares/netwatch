@@ -1,5 +1,7 @@
 # Netwatch
-
+<p align="center">
+  <img src="netwatch.ico" width="80" height="80" alt="Netwatch icon">
+</p>
 *A local, offline-first desktop monitor for network equipment — checks
 devices and service ports, and alerts you by email when something goes down.*
 
@@ -7,7 +9,7 @@ devices and service ports, and alerts you by email when something goes down.*
 
 ## Status
 
-🚧 Work in progress — v0.1.0 (foundation)
+✅ v1.0.0 — core features complete, packaging in progress
 
 ## Planned Features
 
