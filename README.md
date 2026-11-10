@@ -1,56 +1,63 @@
 # Netwatch
+
 <p align="center">
   <img src="netwatch.ico" width="80" height="80" alt="Netwatch icon">
 </p>
-*A local, offline-first desktop monitor for network equipment — checks
-devices and service ports, and alerts you by email when something goes down.*
+
+<p align="center">
+  <em>A local, offline-first desktop monitor for network equipment.</em><br>
+  Checks devices and service ports. Alerts you by email when something goes down.
+</p>
+
+<p align="center">
+  <a href="https://ko-fi.com/yourusername">
+    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20project-yellow?style=for-the-badge&logo=buy-me-a-coffee" alt="Support the project">
+  </a>
+</p>
 
 ![Netwatch main window](Interface.png)
 
-## Status
+## Why Netwatch?
 
-✅ v1.0.0 — core features complete, packaging in progress
+I'm Claudio, a software analyst from Brazil. I built Netwatch to solve two real problems:
 
-## Planned Features
+1. **The professional one** — I provide IT support for small businesses, and there's no easy way to monitor their network devices without spinning up a Linux server or paying for enterprise software.
+2. **The personal one** — I don't own a car, and I live in a big Brazilian city where even a used car costs a small fortune.
 
-- Monitor up to 5,000 devices (free tier: 10 devices)
-- TCP port checks + ICMP fallback for accurate port-block detection
-- Edge-triggered email notifications with per-device routing (no alert spam)
-- Live latency monitoring and automatic updates
-- Local, privacy-friendly storage (no cloud, no phone-home)
-- One-time purchase, lifetime license
+Netwatch is my solution to the first problem. **If it helps you too, you can support me on the second.** Every donation goes toward a down payment on my first car. 🚗
+
+## Features
+
+- **Device monitoring** — Track up to 5,000 devices with TCP port checks and ICMP fallback
+- **Accurate state detection** — Distinguishes between *host down*, *port blocked*, and *timeout*
+- **Email notifications** — Per-device routing, edge-triggered (no alert spam), with a customizable reminder interval
+- **Grouping and search** — Organize devices into groups and filter instantly
+- **Live latency** — See exactly how long each TCP connection takes
+- **Local and private** — TinyDB storage, no cloud, no telemetry, no phone-home
+- **Runs in the background** — Minimize to the system tray and keep monitoring all day
+- **One-file app** — A single `.exe`, no Python installation required
 
 ## Tech Stack
 
-- Python 3.11+
-- Tkinter (GUI)
-- TinyDB (document store, JSON-backed)
-- icmplib (ICMP checks without raw sockets)
-- PyInstaller (packaging to a single .exe)
+- **Python 3.11+** — Application logic
+- **Tkinter** — Native desktop GUI
+- **TinyDB** — Document store (JSON-backed)
+- **icmplib** — ICMP checks without raw sockets
+- **pystray + Pillow** — System tray integration
+- **PyInstaller** — Packaging to a single `.exe`
+
+## Download
+
+*(Coming soon — will link to the compiled `Netwatch.exe` once packaging is done.)*
 
 ## Development
 
-    git clone https://github.com/ClaudioTvares/netwatch.git
-    cd netwatch
-    python -m venv .venv
-    .\.venv\Scripts\Activate.ps1
-    pip install -r requirements.txt
-    python main.py
+Clone the repo and set up the development environment:
 
-## Roadmap
-
-- [x] Project scaffolding and Git setup
-- [x] Device data model
-- [x] Local document-database storage (TinyDB)
-- [x] Offline license system (free / personal / pro tiers)
-- [x] Test suite for licensing (11 tests, pytest)
-- [x] Desktop GUI (Tkinter) — device list, add/edit/delete dialogs
-- [x] TCP + ICMP monitoring engine (live background updates)
-- [x] Email notification pipeline (Company & Personal SMTP)
-- [x] WinRAR-style nag dialog for free tier
-- [x] Device grouping and toolbar filtering
-- [ ] Packaging to a single `.exe` (PyInstaller)
-
-## License
-
-Proprietary. See LICENSE.
+```bash
+git clone https://github.com/ClaudioTvares/netwatch.git
+cd netwatch
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python main.py
