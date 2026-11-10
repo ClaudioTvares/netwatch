@@ -32,6 +32,8 @@ class App(tk.Tk):
         self.title(f"{APP_NAME} — Network Equipment Monitor")
         self.geometry("960x520")
         self.minsize(800, 400)
+        
+        self.current_group = "All Groups"
 
         self._build_menu()
         self._build_toolbar()
@@ -62,20 +64,34 @@ class App(tk.Tk):
     def _build_toolbar(self) -> None:
         bar = ttk.Frame(self, padding=(8, 6))
         bar.pack(fill="x")
+        
         ttk.Button(bar, text="Add Device", command=self._on_add).pack(side="left")
         ttk.Button(bar, text="Edit",       command=self._on_edit).pack(side="left", padx=(6, 0))
         ttk.Button(bar, text="Delete",     command=self._on_delete).pack(side="left", padx=(6, 0))
         ttk.Button(bar, text="Test Now",   command=self._on_test).pack(side="left", padx=(6, 0))
+        
         ttk.Button(bar, text="Refresh",    command=self.refresh_table).pack(side="right")
+        
+        # Group filter
+        self.group_var = tk.StringVar(value="All Groups")
+        self.group_combo = ttk.Combobox(bar, textvariable=self.group_var, state="readonly", width=20)
+        self.group_combo.pack(side="right", padx=(0, 10))
+        self.group_combo.bind("<<ComboboxSelected>>", self._on_group_change)
+        
+        ttk.Label(bar, text="Group:").pack(side="right", padx=(0, 4))
+
+    def _on_group_change(self, event=None) -> None:
+        self.current_group = self.group_var.get()
+        self.refresh_table()
 
     def _build_table(self) -> None:
-        columns = ("status", "name", "ip", "port", "latency", "last_check")
+        columns = ("status", "name", "group", "ip", "port", "latency", "last_check")
         headings = {
-            "status": "Status", "name": "Name", "ip": "IP",
+            "status": "Status", "name": "Name", "group": "Group", "ip": "IP",
             "port": "Port", "latency": "Latency", "last_check": "Last Check",
         }
         widths = {
-            "status": 90, "name": 200, "ip": 140,
+            "status": 90, "name": 160, "group": 100, "ip": 130,
             "port": 70, "latency": 90, "last_check": 160,
         }
 
@@ -100,7 +116,22 @@ class App(tk.Tk):
         devices = storage.list_devices()
         statuses = storage.list_status()
 
-        for device in devices:
+        # Update dropdown options
+        groups = sorted({d.group for d in devices if d.group})
+        combo_options = ["All Groups"] + groups
+        self.group_combo["values"] = combo_options
+        
+        if self.current_group not in combo_options:
+            self.current_group = "All Groups"
+            self.group_var.set("All Groups")
+
+        # Filter list
+        filtered_devices = [
+            d for d in devices 
+            if self.current_group == "All Groups" or d.group == self.current_group
+        ]
+
+        for device in filtered_devices:
             status = statuses.get(device.id, {})
             state = status.get("state", "unknown")
             latency = status.get("latency_ms")
@@ -118,13 +149,14 @@ class App(tk.Tk):
                 "", "end", iid=device.id,
                 values=(
                     state.replace("_", " ").title(),
-                    device.name, device.ip,
+                    device.name, device.group or "—", device.ip,
                     device.port if device.port else "—",
                     latency_str, last_check_str,
                 ),
                 tags=(state,),
             )
-        self.status_var.set(f"{len(devices)} device(s) — last refreshed just now")
+        
+        self.status_var.set(f"{len(filtered_devices)} device(s) shown — last refreshed just now")
 
     def _selected_device(self) -> Device | None:
         selection = self.tree.selection()
@@ -207,6 +239,7 @@ class DeviceDialog(tk.Toplevel):
         self.grab_set()
 
         self.var_name = tk.StringVar(value=device.name if device else "")
+        self.var_group = tk.StringVar(value=device.group if device and device.group else "")
         self.var_ip = tk.StringVar(value=device.ip if device else "")
         self.var_port = tk.StringVar(value=str(device.port) if device and device.port else "")
         self.var_interval = tk.StringVar(value=str(device.check_interval) if device else "30")
@@ -222,6 +255,10 @@ class DeviceDialog(tk.Toplevel):
         row = 0
         ttk.Label(frame, text="Name").grid(row=row, column=0, sticky="w", pady=4)
         ttk.Entry(frame, textvariable=self.var_name, width=32).grid(row=row, column=1, pady=4)
+
+        row += 1
+        ttk.Label(frame, text="Group (optional)").grid(row=row, column=0, sticky="w", pady=4)
+        ttk.Entry(frame, textvariable=self.var_group, width=32).grid(row=row, column=1, pady=4)
 
         row += 1
         ttk.Label(frame, text="IP address").grid(row=row, column=0, sticky="w", pady=4)
@@ -273,6 +310,7 @@ class DeviceDialog(tk.Toplevel):
 
     def _save(self) -> None:
         name = self.var_name.get().strip()
+        group = self.var_group.get().strip() or None
         ip = self.var_ip.get().strip()
         port_str = self.var_port.get().strip()
         interval_str = self.var_interval.get().strip()
@@ -312,6 +350,7 @@ class DeviceDialog(tk.Toplevel):
 
         if self._editing and self._device is not None:
             self._device.name = name
+            self._device.group = group
             self._device.ip = ip
             self._device.port = port
             self._device.check_interval = interval
@@ -320,7 +359,7 @@ class DeviceDialog(tk.Toplevel):
             storage.update_device(self._device)
         else:
             new_device = Device(
-                name=name, ip=ip, port=port, check_interval=interval,
+                name=name, group=group, ip=ip, port=port, check_interval=interval,
                 notify_email=self.var_email.get(),
                 notify_email_to=self.var_email_to.get().strip() or None,
             )
@@ -516,7 +555,7 @@ class SettingsDialog(tk.Toplevel):
             if "gmail" in domain: host = "smtp.gmail.com"
             elif "outlook" in domain or "hotmail" in domain: host = "smtp-mail.outlook.com"
             elif "yahoo" in domain: host = "smtp.mail.yahoo.com"
-            else: host = "smtp.gmail.com"  # Sensible default
+            else: host = "smtp.gmail.com"
 
         cfg = {"host": host, "port": port, "user": user, "password": pwd, "to": to_addr}
         

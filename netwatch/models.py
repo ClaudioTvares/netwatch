@@ -1,10 +1,4 @@
-"""Data models for Netwatch.
-
-A `Device` is the fundamental unit this app works with: one piece of
-network equipment that the operator wants to monitor. The dataclass
-form gives us free type hints, a clean `__init__`, and pleasant
-repr output in the debugger — for free.
-"""
+"""Data models for Netwatch."""
 
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -12,7 +6,7 @@ import uuid
 
 
 def _utc_now_iso() -> str:
-    """Timestamp in ISO 8601, in UTC, e.g. '2026-10-09T14:32:11.123456+00:00'."""
+    """Timestamp in ISO 8601, in UTC."""
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -26,7 +20,8 @@ class Device:
     """A single monitored piece of network equipment."""
 
     name: str
-    ip: str
+    group: str | None = None
+    ip: str = ""
     port: int | None = None
     check_interval: int = 30
     notify_email: bool = True
