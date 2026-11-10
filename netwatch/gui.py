@@ -3,6 +3,8 @@
 import tkinter as tk
 import webbrowser
 import zipfile
+import sys
+from pathlib import Path
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime, timezone
 from PIL import Image, ImageTk
@@ -27,7 +29,7 @@ _STATUS_COLORS = {
     "unknown":      "#57606a",
 }
 
-DONATION_URL = "https://ko-fi.com/yourusername"
+DONATION_URL = "https://ko-fi.com/claudiotavares"
 
 
 class App(tk.Tk):
@@ -38,7 +40,16 @@ class App(tk.Tk):
         self.title(f"{APP_NAME} — Network Equipment Monitor")
         
         try:
-            icon_img = Image.open("netwatch.ico")
+            if getattr(sys, "frozen", False):
+                # Running as .exe: PyInstaller extracts files to a temp dir
+                base_path = Path(sys._MEIPASS)
+            else:
+                # Running as .py script
+                base_path = Path(__file__).resolve().parent.parent
+                
+            icon_path = base_path / "netwatch.ico"
+            
+            icon_img = Image.open(icon_path)
             self.icon_photo = ImageTk.PhotoImage(icon_img)
             self.iconphoto(True, self.icon_photo)
         except Exception as e:

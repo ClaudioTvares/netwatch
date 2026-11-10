@@ -58,7 +58,7 @@ class NagDialog(tk.Toplevel):
 
     def _donate(self):
         # Placeholder link — replace with your actual Ko-fi / Buy Me a Coffee link
-        webbrowser.open("https://ko-fi.com/yourusername")
+        webbrowser.open("https://ko-fi.com/claudiotavares")
         self.destroy()
 
 
