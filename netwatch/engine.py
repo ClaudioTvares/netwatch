@@ -70,19 +70,30 @@ class MonitorEngine:
             event = ""
             msg = ""
 
+            # 1. Edge-triggered (state changed, or first check and it's down)
             if prev_state and prev_state != new_state:
                 should_notify = True
             elif prev_state is None and new_state in ("host_down", "port_blocked", "timeout"):
                 should_notify = True
+
+            # 2. Heartbeat (Reminder every X hours if still down)
             elif new_state in ("host_down", "port_blocked", "timeout"):
                 last_notified_str = last_status.get("last_notified")
                 if last_notified_str:
-                    last_notified = datetime.fromisoformat(last_notified_str)
-                    if now - last_notified > reminder_delta:
-                        should_notify = True
+                    try:
+                        last_notified = datetime.fromisoformat(last_notified_str)
+                        # Ensure both are timezone-aware
+                        if last_notified.tzinfo is None:
+                            last_notified = last_notified.replace(tzinfo=timezone.utc)
+                        
+                        if (now - last_notified) > reminder_delta:
+                            should_notify = True
+                    except ValueError:
+                        pass 
                 else:
                     should_notify = True
 
+            # Determine the message if we need to notify
             if should_notify:
                 if new_state == "online":
                     event = "RECOVERED"
@@ -99,6 +110,7 @@ class MonitorEngine:
                 
                 notifier.notify(current_settings, device, event, msg)
 
+            # Save the new status.
             status_payload = {
                 "state": new_state,
                 "latency_ms": result.latency_ms,
