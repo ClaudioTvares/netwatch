@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://ko-fi.com/yourusername">
+  <a href="https://ko-fi.com/claudiotavares">
     <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20project-yellow?style=for-the-badge&logo=buy-me-a-coffee" alt="Support the project">
   </a>
 </p>
