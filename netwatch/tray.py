@@ -1,26 +1,27 @@
 """System tray integration for Netwatch."""
 
+import sys
 import threading
 import tkinter as tk
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw
 import pystray
 
 
 def _load_tray_image():
     """Load the .ico as a PIL image for the tray icon."""
-    # Find the .ico in the project root (or next to the .exe when frozen)
     try:
-        import sys
         if getattr(sys, "frozen", False):
-            base = Path(sys.executable).parent
+            # Running as .exe
+            base = Path(sys._MEIPASS)
         else:
+            # Running as .py script
             base = Path(__file__).resolve().parent.parent
+            
         icon_path = base / "netwatch.ico"
         return Image.open(icon_path)
     except Exception:
         # Fallback: a plain green circle
-        from PIL import ImageDraw
         image = Image.new("RGB", (64, 64), "white")
         dc = ImageDraw.Draw(image)
         dc.ellipse((8, 8, 56, 56), fill="#1a7f37")
@@ -30,23 +31,32 @@ def _load_tray_image():
 class TrayIcon:
     def __init__(self, app: tk.Tk):
         self.app = app
+        
+        # Create the icon without a menu first
         self.icon = pystray.Icon(
             "netwatch",
             _load_tray_image(),
-            "Netwatch Monitor",
-            menu=pystray.Menu(
-                pystray.MenuItem("Open Netwatch", self.show_window, default=True),
-                pystray.MenuItem("Exit", self.quit_app),
-            ),
+            "Netwatch Monitor"
         )
+        
+        # Build the menu using lambdas to ensure references are kept
+        menu = pystray.Menu(
+            pystray.MenuItem("Open Netwatch", lambda: self._show_window(), default=True),
+            pystray.MenuItem("Exit", lambda: self._quit_app()),
+        )
+        
+        # Attach the menu after the object is fully initialized
+        self.icon.menu = menu
 
     def run(self):
         threading.Thread(target=self.icon.run, daemon=True).start()
 
-    def show_window(self, icon, item):
+    def _show_window(self):
+        """Bring the hidden window back."""
         self.app.after(0, self.app.deiconify)
         self.app.after(0, self.app.lift)
 
-    def quit_app(self, icon, item):
+    def _quit_app(self):
+        """Actually destroy the app."""
         self.icon.stop()
         self.app.after(0, self.app.destroy)
