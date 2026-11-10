@@ -1,79 +1,69 @@
-"""WinRAR-style nag dialog for the free tier."""
+"""Startup dialog encouraging donations."""
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
+import webbrowser
 
-from .constants import APP_NAME, NAG_TITLE, NAG_MESSAGE
-from .licensing import load_license, save_license_key
+from .constants import APP_NAME
 
 
 class NagDialog(tk.Toplevel):
-    def __init__(self, parent, on_license_updated=None):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.title(NAG_TITLE)
+        self.title(f"Support {APP_NAME}")
         self.resizable(False, False)
         self.transient(parent)
         self.grab_set()
-        self.on_license_updated = on_license_updated
 
         frm = ttk.Frame(self, padding=20)
         frm.pack(fill="both", expand=True)
 
-        ttk.Label(frm, text=f"Thank you for trying {APP_NAME}",
-                  font=("", 12, "bold")).pack(anchor="w")
-        ttk.Label(frm, text=NAG_MESSAGE, wraplength=460,
-                  justify="left").pack(anchor="w", pady=(10, 18))
+        # Title
+        ttk.Label(
+            frm, 
+            text=f"Thank you for using {APP_NAME}!", 
+            font=("", 14, "bold")
+        ).pack(anchor="w")
+        
+        # Personal message
+        msg = (
+            "Netwatch is completely free, local, and privacy-friendly. "
+            "There is no cloud, no telemetry, and no tracking.\n\n"
+            "I built this project to help me buy my first car. If Netwatch "
+            "saves you time or helps you keep your network running, "
+            "please consider supporting the project!"
+        )
+        ttk.Label(
+            frm, 
+            text=msg, 
+            wraplength=420, 
+            justify="left"
+        ).pack(anchor="w", pady=(10, 20))
 
+        # Buttons
         btns = ttk.Frame(frm)
         btns.pack(fill="x")
 
-        ttk.Button(btns, text="Enter license key",
-                   command=self._enter_key).pack(side="left")
-        ttk.Button(btns, text="Continue free",
-                   command=self.destroy).pack(side="right")
-        ttk.Button(btns, text="Buy now",
-                   command=self._buy).pack(side="right", padx=(0, 8))
+        ttk.Button(
+            btns, 
+            text="❤ Support the Project", 
+            command=self._donate
+        ).pack(side="left")
 
-    def _buy(self):
-        messagebox.showinfo(
-            "Buy Netwatch",
-            "Store page coming soon.\n\n"
-            "For now, contact the developer to purchase a license."
-        )
+        ttk.Button(
+            btns, 
+            text="Continue",
+            command=self.destroy
+        ).pack(side="right")
 
-    def _enter_key(self):
-        dlg = tk.Toplevel(self)
-        dlg.title("Enter License Key")
-        dlg.transient(self); dlg.grab_set()
-        frm = ttk.Frame(dlg, padding=14)
-        frm.pack(fill="both", expand=True)
-
-        ttk.Label(frm, text="Paste your license key:").pack(anchor="w")
-        entry = ttk.Entry(frm, width=46)
-        entry.pack(pady=8)
-        entry.focus_set()
-
-        def submit():
-            raw = entry.get().strip()
-            lic = save_license_key(raw)
-            if not lic:
-                messagebox.showerror("Invalid key", "That key is not valid.", parent=dlg)
-                return
-            messagebox.showinfo(
-                "Activated",
-                f"License activated:\n{lic.describe()}",
-                parent=dlg,
-            )
-            dlg.destroy()
-            self.destroy()
-            if self.on_license_updated:
-                self.on_license_updated(lic)
-
-        btns = ttk.Frame(frm)
-        btns.pack(fill="x", pady=(4, 0))
-        ttk.Button(btns, text="Cancel", command=dlg.destroy).pack(side="right")
-        ttk.Button(btns, text="Activate", command=submit).pack(side="right", padx=(0, 6))
+    def _donate(self):
+        # Placeholder link — replace with your actual Ko-fi / Buy Me a Coffee link
+        webbrowser.open("https://ko-fi.com/yourusername")
+        self.destroy()
 
 
 def should_show_nag() -> bool:
-    return not load_license().is_paid
+    """Show the dialog only once per day, or on first launch."""
+    # For simplicity, we just always show it on startup for now.
+    # You can make this smarter later by storing a "last_nag_date" in settings.
+    return True

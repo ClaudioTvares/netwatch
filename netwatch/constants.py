@@ -39,9 +39,7 @@ LICENSE_FILENAME = "license.key"
 NAG_TITLE = f"{APP_NAME} — Free Version"
 
 NAG_MESSAGE = (
-    "You're using the free version of Netwatch, limited to 10 devices.\n\n"
-    "Buying the product would help the developer immensely and also allow "
-    "you to monitor up to 5,000 devices and receive notifications for each "
-    "of them every single time one goes offline or a port becomes unavailable.\n\n"
-    "One-time payment. Lifetime license. No subscription."
+    "Netwatch is a free, local, privacy-friendly tool.\n\n"
+    "If it helps you, please consider supporting the project so I can "
+    "buy my first car!"
 )

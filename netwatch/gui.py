@@ -1,7 +1,9 @@
 """Tkinter GUI for Netwatch."""
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+import webbrowser
+import zipfile
+from tkinter import ttk, messagebox, filedialog
 from datetime import datetime, timezone
 from PIL import Image, ImageTk
 
@@ -24,6 +26,8 @@ _STATUS_COLORS = {
     "timeout":      "#9a6700",
     "unknown":      "#57606a",
 }
+
+DONATION_URL = "https://ko-fi.com/yourusername"
 
 
 class App(tk.Tk):
@@ -56,23 +60,29 @@ class App(tk.Tk):
         self.tray = TrayIcon(self)
         self.tray.run()
 
+        # Intercept the X button
         self.protocol("WM_DELETE_WINDOW", self.on_close_clicked)
 
         self.refresh_table()
 
         if should_show_nag():
-            self.after(500, lambda: NagDialog(self, on_license_updated=self._on_license_updated))
+            self.after(500, lambda: NagDialog(self))
 
     def _build_menu(self) -> None:
         menubar = tk.Menu(self)
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Email Settings…", command=self._open_settings)
         file_menu.add_separator()
+        file_menu.add_command(label="Backup Data...", command=self._on_backup)
+        file_menu.add_command(label="Restore Backup...", command=self._on_restore)
+        file_menu.add_separator()
         file_menu.add_command(label="Minimize to Background", command=self.hide_window)
         file_menu.add_command(label="Exit", command=self.destroy)
         menubar.add_cascade(label="File", menu=file_menu)
 
         help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu.add_command(label="Support the Project", command=self._open_donate_link)
+        help_menu.add_separator()
         help_menu.add_command(label="About", command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
         self.config(menu=menubar)
@@ -125,7 +135,6 @@ class App(tk.Tk):
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         
-        # Footer with developer credit
         footer = ttk.Frame(self, padding=(8, 4))
         footer.pack(fill="x", side="bottom")
         ttk.Label(
@@ -237,14 +246,20 @@ class App(tk.Tk):
         state_name = result.state.value.replace('_', ' ').title()
         self.status_var.set(f"Test complete: {device.name} is {state_name}")
 
+    def _open_donate_link(self) -> None:
+        webbrowser.open(DONATION_URL)
+
     def _show_about(self) -> None:
-        messagebox.showinfo(f"About {APP_NAME}", f"{APP_NAME} v{APP_VERSION}\n\nLocal network equipment monitor.\nNo cloud. No telemetry. No subscription.\n\nDeveloped by Claudio Tavares")
+        messagebox.showinfo(
+            f"About {APP_NAME}", 
+            f"{APP_NAME} v{APP_VERSION}\n\n"
+            "Local network equipment monitor.\n"
+            "No cloud. No telemetry. No subscription.\n\n"
+            "Developed by Claudio Tavares"
+        )
 
     def _open_settings(self) -> None:
         SettingsDialog(self)
-
-    def _on_license_updated(self, license_obj):
-        self.status_var.set(f"License updated: {license_obj.describe()}")
 
     def _engine_updated(self) -> None:
         self.after(0, self.refresh_table)
@@ -253,24 +268,60 @@ class App(tk.Tk):
         self.withdraw()
 
     def on_close_clicked(self) -> None:
-        current_settings = settings_module.load_settings()
-        general = current_settings.get("general", {})
-        
-        if not general.get("show_close_warning", True):
-            self.hide_window()
-            return
-
+        # Show the warning dialog every time the user clicks X
         dialog = HideWarningDialog(self)
         self.wait_window(dialog)
         
         if dialog.action == "hide":
-            if dialog.var_show_again.get() is False:
-                general["show_close_warning"] = False
-                current_settings["general"] = general
-                settings_module.save_settings(current_settings)
             self.hide_window()
-        elif dialog.action == "exit":
-            self.destroy()
+        # We no longer handle "exit" here, because the dialog only has "Minimize"
+
+    def _on_backup(self) -> None:
+        filepath = filedialog.asksaveasfilename(
+            title="Save Backup",
+            defaultextension=".zip",
+            filetypes=[("Zip Archive", "*.zip")]
+        )
+        if not filepath:
+            return
+
+        try:
+            with zipfile.ZipFile(filepath, 'w') as zf:
+                if storage.DB_PATH.exists():
+                    zf.write(storage.DB_PATH, arcname="netwatch.json")
+                if settings_module.SETTINGS_PATH.exists():
+                    zf.write(settings_module.SETTINGS_PATH, arcname="settings.json")
+                    
+            messagebox.showinfo("Backup Complete", f"Data successfully backed up to:\n{filepath}")
+        except Exception as e:
+            messagebox.showerror("Backup Failed", f"An error occurred:\n{e}")
+
+    def _on_restore(self) -> None:
+        filepath = filedialog.askopenfilename(
+            title="Restore Backup",
+            filetypes=[("Zip Archive", "*.zip")]
+        )
+        if not filepath:
+            return
+
+        if not messagebox.askyesno("Confirm Restore", "This will overwrite your current devices and settings.\nAre you sure?"):
+            return
+
+        try:
+            with zipfile.ZipFile(filepath, 'r') as zf:
+                if "netwatch.json" in zf.namelist():
+                    zf.extract("netwatch.json", path=storage.DATA_DIR)
+                if "settings.json" in zf.namelist():
+                    zf.extract("settings.json", path=settings_module.SETTINGS_PATH.parent)
+
+            # CRITICAL: Tell the storage layer to reload from the new file
+            storage.reload_database()
+
+            # Force a reload of the UI
+            self.refresh_table()
+            messagebox.showinfo("Restore Complete", "Backup restored successfully!\nYou may want to restart the app to apply email settings immediately.")
+        except Exception as e:
+            messagebox.showerror("Restore Failed", f"An error occurred:\n{e}")
 
     def destroy(self) -> None:
         if hasattr(self, "engine"):
@@ -435,7 +486,6 @@ class SettingsDialog(tk.Toplevel):
         
         g = current.get("general", {})
         self.var_interval_hours = tk.StringVar(value=str(g.get("alert_interval_hours", 12)))
-        self.var_show_close_warning = tk.BooleanVar(value=g.get("show_close_warning", True))
 
         c = current.get("company_email", {})
         self.var_co_host = tk.StringVar(value=c.get("host", "smtp.office365.com"))
@@ -475,13 +525,6 @@ class SettingsDialog(tk.Toplevel):
             foreground="#57606a",
             font=("", 8)
         ).grid(row=row, column=0, columnspan=2, sticky="w")
-
-        row += 1
-        ttk.Checkbutton(
-            frame_gen,
-            text="Show warning when closing the window",
-            variable=self.var_show_close_warning
-        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(16, 0))
 
         # TAB 1: COMPANY
         frame_co = ttk.Frame(notebook, padding=16)
@@ -591,7 +634,6 @@ class SettingsDialog(tk.Toplevel):
 
         gen_cfg = {
             "alert_interval_hours": interval_hours,
-            "show_close_warning": self.var_show_close_warning.get(),
         }
 
         co_cfg = {
@@ -678,43 +720,32 @@ class HideWarningDialog(tk.Toplevel):
         self.grab_set()
         
         self.action = None
-        self.var_show_again = tk.BooleanVar(value=True)
 
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
 
         ttk.Label(
             frame, 
-            text="Netwatch is still running in the background", 
+            text="Netwatch is minimized to the background", 
             font=("", 12, "bold")
         ).pack(anchor="w", pady=(0, 10))
 
         msg = (
-            "The app will keep running in the background so it can "
-            "monitor your devices and send email alerts.\n\n"
-            "You can reopen it anytime by clicking the green icon in your "
-            "notification area (near the clock)."
+            "The app will keep monitoring your devices and sending email alerts.\n\n"
+            "You can reopen it anytime by clicking the blue globe icon in your "
+            "notification area (near the clock).\n\n"
+            "To completely close the app and stop monitoring, right-click the icon "
+            "and select 'Exit'. Note: alerts will not be sent while the app is closed."
         )
-        ttk.Label(frame, text=msg, wraplength=380, justify="left").pack(anchor="w", pady=(0, 16))
-
-        ttk.Checkbutton(
-            frame, 
-            text="Don't show this warning again", 
-            variable=self.var_show_again
-        ).pack(anchor="w", pady=(0, 16))
+        ttk.Label(frame, text=msg, wraplength=400, justify="left").pack(anchor="w", pady=(0, 20))
 
         btn_frame = ttk.Frame(frame)
         btn_frame.pack(fill="x")
         
-        ttk.Button(btn_frame, text="Exit Netwatch", command=self._on_exit).pack(side="left")
-        ttk.Button(btn_frame, text="Minimize to Background", command=self._on_hide).pack(side="right")
+        ttk.Button(btn_frame, text="Minimize to Background", command=self._on_hide).pack(fill="x")
 
     def _on_hide(self):
         self.action = "hide"
-        self.destroy()
-
-    def _on_exit(self):
-        self.action = "exit"
         self.destroy()
 
 
