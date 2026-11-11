@@ -17,6 +17,14 @@
 
 ![Netwatch main window](Interface.png)
 
+## Quick Start
+
+1. **Download** `Netwatch.exe` from the [latest release](https://github.com/ClaudioTvares/netwatch/releases/latest).
+2. **Create a folder** anywhere you like (e.g., `C:\Netwatch\`) and move `Netwatch.exe` into it.
+3. **Double-click** it. That's it — no installer, no Python required.
+
+📖 **[Read the full documentation →](DOCS.md)** — it explains every feature, every color, every setting, and answers common questions.
+
 ## Why Netwatch?
 
 I'm Claudio, a software analyst from Brazil. I built Netwatch to solve two real problems:
@@ -48,9 +56,21 @@ Netwatch is my solution to the first problem. **If it helps you too, you can sup
 
 ## Download
 
-The latest release is available on the [Releases page](https://github.com/ClaudioTvares/netwatch/releases).
+The latest release is available on the [Releases page](https://github.com/ClaudioTvares/netwatch/releases/latest).
 
-- **Windows**: [Download Netwatch.exe](https://github.com/ClaudioTvares/netwatch/releases/latest)
+- **Windows**: `Netwatch.exe` (no installation required)
+
+## Documentation
+
+Full documentation is available in **[DOCS.md](DOCS.md)**, including:
+
+- Installation guide
+- What each status color means
+- How to add devices
+- How to configure email alerts (including Gmail App Passwords)
+- How the reminder interval works
+- Backup and restore
+- FAQ
 
 ## Development
 
